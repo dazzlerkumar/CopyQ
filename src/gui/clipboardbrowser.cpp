@@ -623,14 +623,6 @@ void ClipboardBrowser::preload(int pixels, bool above, const QModelIndex &start)
         }
         row += direction;
     }
-
-    // Preload one more item outside offset.
-    for ( ; ind.isValid() && isRowHidden(row); ind = index(row) )
-        row += direction;
-    if ( ind.isValid() ) {
-        d.cache(ind);
-        y += s + d.sizeHint(ind).height();
-    }
 }
 
 void ClipboardBrowser::moveToTop(const QModelIndex &index)
@@ -1339,7 +1331,9 @@ void ClipboardBrowser::keyPressEvent(QKeyEvent *event)
             if (key == Qt::Key_PageDown || key == Qt::Key_PageUp)
                 preload(h, (key == Qt::Key_PageUp), current);
             else if (key == Qt::Key_Down || key == Qt::Key_Up)
-                preload(0, (key == Qt::Key_Up), current);
+                preload(2 * spacing(), (key == Qt::Key_Up), current);
+            else if (key == Qt::Key_End)
+                preload(h, true, index(length() - 1));
             scheduleDelayedItemsLayout();
             executeDelayedItemsLayout();
             setUpdatesEnabled(true);
@@ -1659,10 +1653,14 @@ void ClipboardBrowser::updateSizes()
 
 void ClipboardBrowser::updateItemWidgets()
 {
+    const auto contents = viewport()->contentsRect();
     for (auto index : m_itemWidgetsToUpdate) {
         if (index.isValid()) {
-            setUpdatesEnabled(false);
-            d.cache(index);
+            const auto rect = visualRect(index);
+            if (contents.top() < rect.bottom() && rect.top() < contents.bottom()) {
+                setUpdatesEnabled(false);
+                d.cache(index);
+            }
         }
     }
 
