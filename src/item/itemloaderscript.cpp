@@ -20,6 +20,7 @@
 #include "itemloaderscript.h"
 
 #include "common/commandstatus.h"
+#include "common/common.h"
 #include "common/contenttype.h"
 #include "common/log.h"
 #include "gui/icons.h"
@@ -36,11 +37,13 @@
 #include <QScriptEngine>
 #include <QScriptValueIterator>
 #include <QHBoxLayout>
+#include <QTimer>
 #include <QVBoxLayout>
 #include <QWidget>
 
 namespace {
 
+const int scriptTimeoutMs = 1000;
 const char scriptFunctionName[] = "CopyQScript";
 
 QWidget *label(Qt::Orientation orientation, const QString &name, QWidget *w)
@@ -192,6 +195,7 @@ public:
         , m_obj(obj)
         , m_scriptable(scriptable)
     {
+        initSingleShotTimer( &m_timer, scriptTimeoutMs, scriptable, SLOT(abort()) );
     }
 
     bool saveItems(const QString &tabName, const QAbstractItemModel &model, QIODevice *file) override
@@ -236,13 +240,26 @@ private:
         if (m_omitRecursiveCalls) {
             const auto message = QString("Script %1: Avoiding recursive calls").arg(m_id);
             log(message, LogWarning);
+            m_scriptable->abort();
+            m_obj = QScriptValue();
             return itemData;
         }
 
         m_omitRecursiveCalls = true;
         const auto args = QScriptValueList() << m_scriptable->fromDataMap(itemData);
+        m_timer.start();
         const auto result = fn.call(m_obj, args);
         m_omitRecursiveCalls = false;
+
+        const auto takesTooLong = !m_timer.isActive();
+        m_timer.stop();
+
+        if (takesTooLong) {
+            const auto message = QString("Script %1: %2 timed out").arg(m_id, fnName);
+            log(message, LogWarning);
+            m_obj = QScriptValue();
+            return itemData;
+        }
 
         if ( processUncaughtException(*m_scriptable, m_id, fnName) )
             return itemData;
@@ -258,6 +275,7 @@ private:
     QScriptValue m_obj;
     Scriptable *m_scriptable;
     bool m_omitRecursiveCalls = false;
+    QTimer m_timer;
 };
 
 class ItemLoaderScript : public QObject, public ItemLoaderInterface
