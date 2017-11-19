@@ -233,8 +233,16 @@ private:
         if ( !fn.isFunction() )
             return itemData;
 
+        if (m_omitRecursiveCalls) {
+            const auto message = QString("Script %1: Avoiding recursive calls").arg(m_id);
+            log(message, LogWarning);
+            return itemData;
+        }
+
+        m_omitRecursiveCalls = true;
         const auto args = QScriptValueList() << m_scriptable->fromDataMap(itemData);
         const auto result = fn.call(m_obj, args);
+        m_omitRecursiveCalls = false;
 
         if ( processUncaughtException(*m_scriptable, m_id, fnName) )
             return itemData;
@@ -249,6 +257,7 @@ private:
     ItemSaverPtr m_saver;
     QScriptValue m_obj;
     Scriptable *m_scriptable;
+    bool m_omitRecursiveCalls = false;
 };
 
 class ItemLoaderScript : public QObject, public ItemLoaderInterface
