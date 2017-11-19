@@ -2382,6 +2382,163 @@ void Tests::automaticCommandNoOutputTab()
     RUN("tab" << QString(clipboardTabName) << "size", "0\n");
 }
 
+void Tests::scriptCommandLoaded()
+{
+    const auto script = R"(
+        setCommands([{
+            isScript: true,
+            cmd: 'add("LOADED")'
+        }])
+        )";
+    RUN(script, "");
+    RUN("read(0)", "LOADED");
+}
+
+void Tests::scriptCommandAddFunction()
+{
+    const auto script = R"(
+        setCommands([{
+            isScript: true,
+            cmd: 'test = function() { return "TEST"; }'
+        }])
+        )";
+    RUN(script, "");
+    RUN("test", "TEST\n");
+}
+
+void Tests::scriptCommandOverrideFunction()
+{
+    const auto script = R"(
+        setCommands([{
+            isScript: true,
+            cmd: 'popup = function(msg) { return msg; }'
+        }])
+        )";
+    RUN(script, "");
+    RUN("popup" << "test" << "xxx", "test");
+}
+
+void Tests::scriptCommandCalledOnce()
+{
+    const auto script = R"(
+        setCommands([{
+            isScript: true,
+            cmd: 'function CopyQScript() {'
+               + '  add("CALLED")'
+               + '}'
+        }])
+        )";
+    RUN(script, "");
+    RUN("read(0,1,2)", "CALLED\n\n");
+}
+
+void Tests::scriptCommandLoadSettingsCalledOnce()
+{
+    const auto script = R"(
+        setCommands([{
+            isScript: true,
+            cmd: 'function CopyQScript() {'
+               + '  return {'
+               + '    loadSettings: function(settings) {'
+               + '      add("CONFIGURED");'
+               + '    }'
+               + '  };'
+               + '}'
+        }])
+        )";
+    RUN(script, "");
+    RUN("read(0,1,2)", "CONFIGURED\n\n");
+}
+
+void Tests::scriptCommandCopyItem()
+{
+    const auto script = R"(
+        setCommands([{
+            isScript: true,
+            cmd: 'function CopyQScript() {'
+               + '  return {'
+               + '    copyItem: function(data) {'
+               + '      add("COPIED");'
+               + '      text = str(data[mimeText]);'
+               + '      if (text !== "XXX") return;'
+               + '      data[mimeText] = "TEST:" + text;'
+               + '      return data;'
+               + '    }'
+               + '  };'
+               + '}'
+        }])
+        )";
+    RUN(QString(script) + "; add('XXX'); keys('ENTER')", "");
+    RUN("read(0)", "COPIED");
+    WAIT_FOR_CLIPBOARD("TEST:XXX");
+}
+
+void Tests::scriptCommandDisplayItem()
+{
+    const auto script = R"(
+        setCommands([{
+            isScript: true,
+            cmd: 'function CopyQScript() {'
+               + '  return {'
+               + '    displayItem: function(data) {'
+               + '      text = str(data[mimeText]);'
+               + '      if (text !== "a" && text != "b") return;'
+               + '      add("CALLED");'
+               + '    }'
+               + '  };'
+               + '}'
+        }])
+        )";
+    RUN("add('b', 'a'); " + QString(script), "");
+    WAIT_ON_OUTPUT("read(0,1,2,3,4)", "CALLED\nCALLED\na\nb\n");
+}
+
+void Tests::scriptCommandCopyItemBad()
+{
+    const auto script = R"(
+        setCommands([{
+            isScript: true,
+            cmd: 'function CopyQScript() {'
+               + '  return {'
+               + '    copyItem: function(data) {'
+               + '      add("1");'
+               + '      config("tab_tree", "true");'
+               + '      sleep(20);'
+               + '      add("2");'
+               + '      config("tab_tree", "false");'
+               + '      sleep(20);'
+               + '      add("3");'
+               + '    }'
+               + '  };'
+               + '}'
+        }])
+        )";
+    RUN("add('XXX'); " + QString(script), "");
+}
+
+void Tests::scriptCommandDisplayItemBad()
+{
+    const auto script = R"(
+        setCommands([{
+            isScript: true,
+            cmd: 'function CopyQScript() {'
+               + '  return {'
+               + '    displayItem: function(data) {'
+               + '      add("1");'
+               + '      config("tab_tree", "true");'
+               + '      sleep(20);'
+               + '      add("2");'
+               + '      config("tab_tree", "false");'
+               + '      sleep(20);'
+               + '      add("3");'
+               + '    }'
+               + '  };'
+               + '}'
+        }])
+        )";
+    RUN("add('XXX'); " + QString(script), "");
+}
+
 int Tests::run(const QStringList &arguments, QByteArray *stdoutData, QByteArray *stderrData, const QByteArray &in)
 {
     return m_test->run(arguments, stdoutData, stderrData, in);

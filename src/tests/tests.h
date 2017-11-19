@@ -195,6 +195,16 @@ private slots:
     void automaticCommandOutputTab();
     void automaticCommandNoOutputTab();
 
+    void scriptCommandLoaded();
+    void scriptCommandAddFunction();
+    void scriptCommandOverrideFunction();
+    void scriptCommandCalledOnce();
+    void scriptCommandLoadSettingsCalledOnce();
+    void scriptCommandCopyItem();
+    void scriptCommandDisplayItem();
+    void scriptCommandCopyItemBad();
+    void scriptCommandDisplayItemBad();
+
 private:
     void clearServerErrors();
     int run(const QStringList &arguments, QByteArray *stdoutData = nullptr,
