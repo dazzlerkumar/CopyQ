@@ -923,6 +923,8 @@ void ClipboardBrowser::showEvent(QShowEvent *event)
 
 void ClipboardBrowser::currentChanged(const QModelIndex &current, const QModelIndex &previous)
 {
+    QListView::currentChanged(current, previous);
+
     if (previous.isValid())
         d.setItemWidgetCurrent(previous, false);
 
@@ -939,13 +941,9 @@ void ClipboardBrowser::currentChanged(const QModelIndex &current, const QModelIn
                 row = findPreviousVisibleRow(current.row());
         }
 
-        if ( row != -1 && row != current.row() ) {
+        if ( row != -1 && row != current.row() )
             setCurrentIndex( index(row) );
-            return;
-        }
     }
-
-    QListView::currentChanged(current, previous);
 }
 
 void ClipboardBrowser::selectionChanged(const QItemSelection &selected,
