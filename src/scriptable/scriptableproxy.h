@@ -22,6 +22,7 @@
 
 #include "gui/clipboardbrowser.h"
 #include "gui/notificationbutton.h"
+#include "item/persistentdisplayitem.h"
 
 #include <QClipboard>
 #include <QList>
@@ -198,6 +199,12 @@ public:
 
     QString iconTagColor();
     bool setIconTagColor(const QString &name);
+
+    void connectSignal(QObject *receiver);
+
+    void removeInvalidSelections(QVector<PersistentDisplayItem> *selections);
+    void setDisplayData(
+            const QVector<PersistentDisplayItem> &selections, const QVector<QVariantMap> &dataList);
 
 private:
     ClipboardBrowser *fetchBrowser(const QString &tabName);
